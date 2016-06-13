@@ -257,45 +257,20 @@ def downloader(lidar_raster, short_name):
 		soup = BeautifulSoup(page, "lxml")
 		entries = soup.findAll('tr', class_="item type-application type-octet-stream")
 
-		print "Downloading " + str(len(entries)) + " files"
+		print "Prepared to download " + str(len(entries)) + " files"
+		user_input = raw_input("Would you like to continue? [y]es or [n]o: ")
 		print "\n"
 
-		source_directory = os.getcwd()
-		data_directory = source_directory + "/" + short_name
-		if os.path.exists(data_directory):
-			os.chdir(data_directory)
-		else:
-			os.makedirs(short_name)
-			os.chdir(data_directory)
+		if user_input == "Y" or user_input == "y":
+			source_directory = os.getcwd()
+			data_directory = source_directory + "/" + short_name
+			if os.path.exists(data_directory):
+				os.chdir(data_directory)
+			else:
+				os.makedirs(short_name)
+				os.chdir(data_directory)
 
 
-		for i in range(0, len(entries)):
-			file = entries[i].a["href"]
-			URL_with_file = URL + file
-			print file
-			wget.download(URL_with_file)
-			print "\n"
-
-		os.chdir(source_directory)
-
-	else:
-		URL = "https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/" + short_name + "/"
-		page = urllib2.urlopen(URL)
-		soup = BeautifulSoup(page, "lxml")
-		entries = soup.findAll('tr', class_ = "item type-application type-octet-stream")
-		sub_dirs = soup.findAll('tr', class_= "item subdir")
-		num_sub_dirs = len(sub_dirs)
-
-		source_directory = os.getcwd()
-		sauce = source_directory
-		data_directory = source_directory + "/" + short_name
-		if os.path.exists(data_directory):
-			os.chdir(data_directory)
-		else:
-			os.makedirs(short_name)
-			os.chdir(data_directory)
-
-		if num_sub_dirs == 0:
 			for i in range(0, len(entries)):
 				file = entries[i].a["href"]
 				URL_with_file = URL + file
@@ -304,37 +279,50 @@ def downloader(lidar_raster, short_name):
 				print "\n"
 
 			os.chdir(source_directory)
-
 		else:
-			for i in range(0, num_sub_dirs):
-				sub_dir_name = sub_dirs[i].a["href"]
-				print sub_dir_name
-				next_lvl_dir = os.getcwd() + "/" + sub_dir_name
-				if os.path.exists(next_lvl_dir):
-					os.chdir(next_lvl_dir)
-				else:
-					os.makedirs(next_lvl_dir)
-					os.chdir(next_lvl_dir)
+			del lidar_name_list[:]
+			del lidar_ID_list[:]
+			del lidar_private_bit_list[:]
+			main("OpenTopoDL.py")
 
-				URL = "https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/" + short_name + "/" + sub_dir_name
-				page = urllib2.urlopen(URL)
-				soup = BeautifulSoup(page, "lxml")
-				entries = soup.findAll('tr', class_ = "item type-application type-octet-stream")
-				sub_dirs = soup.findAll('tr', class_ = "item subdir")
-				num_sub_dirs = len(sub_dirs)
 
-				if num_sub_dirs == 0:
-					for i in range(0, len(entries)):
-						file = entries[i].a["href"]
-						URL_with_file = URL + file
-						print file
-						wget.download(URL_with_file)
-						print "\n"
-					os.chdir(sauce)
-				else:
-					print "Unable to download data"
+	else:
+		URL = "https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/" + short_name + "/"
+		dir_recursive_descent(URL, short_name)
+
+def dir_recursive_descent(dir_URL, short_name):
+	page = urllib2.urlopen(dir_URL)
+	soup = BeautifulSoup(page, "lxml")
+	entries = soup.findAll('tr', class_ = "item type-application type-octet-stream")
+	sub_dirs = soup.findAll('tr', class_= "item subdir")
+	num_sub_dirs = len(sub_dirs)
+
+	source_directory = os.getcwd()
+	data_directory = source_directory + "\\" + short_name
+
+	if os.path.exists(data_directory):
+		os.chdir(data_directory)
+	else:
+		os.makedirs(short_name)
+		os.chdir(data_directory)
+
+	for i in range(0, len(entries)):
+		file = entries[i].a["href"]
+		URL_with_file = dir_URL + file
+		print URL_with_file
+		wget.download(URL_with_file)
+		print "\n"
+
+	os.chdir(source_directory)
+
+	for i in range(0, num_sub_dirs):
+		sub_dir_name = sub_dirs[i].a["href"]
+		sub_dir_URL = dir_URL + sub_dir_name
+		os.chdir(data_directory)
+		dir_recursive_descent(sub_dir_URL, sub_dir_name)
 
 def main(argv):
+
 	# Globals #
 	global lidar_name_list
 	global lidar_ID_list
@@ -349,8 +337,16 @@ def main(argv):
 	print "OpenTopo Downloader - Python script to download data from OpenTopography"
 	print "When asked for user input, please enter the corresponding letter/number in the square brackets, []\n"
 
-	lidar_raster = lidar_vs_raster()
-	user_request = area_listing(lidar_raster)
+	if len(argv) > 1:
+		if argv[1] == "l":
+			lidar_raster == "PC_Bulk"
+		elif argv[1] == "r":
+			lidar_raster == "Raster"
+		user_request == int(argv[2]) - 1
+	else:
+		lidar_raster = lidar_vs_raster()
+		user_request = area_listing(lidar_raster)
+
 	matrix = lidar_array_maker(lidar_raster, lidar_name_list, lidar_ID_list, lidar_private_bit_list, lidar_matrix)
 
 	if lidar_raster == "PC_Bulk":
