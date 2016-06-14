@@ -160,76 +160,46 @@ def private_bits(lidar_raster):
 #Additionally, add a bit associated with the data to see if it is private or not
 def area_listing(lidar_raster):
 	global lidar_name_list
-	global lidar_private_bit_list
 	global raster_name_list
-	global raster_private_bit_list
 
 	non_private_threshold = 200
 	private_shear = -348
 
 	if lidar_raster == "PC_Bulk":
-		lidar_url = "http://opentopo.sdsc.edu/lidar"
-		lidar_page = urllib2.urlopen(lidar_url)
-		lidar_soup = BeautifulSoup(lidar_page, "lxml")
-		table = lidar_soup.find("table", class_= "table table-hover table-condensed table-striped table-nospace")
-		for row in table.findAll("tr"):
-			cells = row.findAll("td")
-			cells_str = str(cells)
-			if "small text-right text-muted" in cells_str:
-				name_shearer(cells_str, lidar_raster)
-				ID_shearer(cells_str, lidar_raster)
-
-		private_bits(lidar_raster) 
-
-		print "\n"
-		print "* indicates the dataset is PRIVATE and unavailable for download"
-		print "\n"
-
-		for i in range(0, len(lidar_name_list)):
-			if len(lidar_name_list[i]) < non_private_threshold:
-				print str(i + 1) + ":", lidar_name_list[i]
-			else:
-				string = lidar_name_list[i]
-				string = string[:private_shear]
-				lidar_name_list[i] = string
-				print str(i + 1) + "*:", lidar_name_list[i]
-
-		print "\n"
-		user_request = raw_input("Requested dataset's number entry: ")
-
-		return int(user_request) - 1
-
+		URL = "http://opentopo.sdsc.edu/lidar"
+		name_list = lidar_name_list
 	elif lidar_raster == "Raster":
-		raster_url = "http://opentopo.sdsc.edu/lidar?format=sd"
-		raster_page = urllib2.urlopen(raster_url)
-		raster_soup = BeautifulSoup(raster_page, "lxml")
-		table = raster_soup.find("table", class_ = "table table-hover table-condensed table-striped table-nospace")
-		for row in table.findAll("tr"):
-			cells = row.findAll("td")
-			cells_str = str(cells)
-			if "small text-right text-muted" in cells_str:
-				name_shearer(cells_str, lidar_raster)
-				ID_shearer(cells_str, lidar_raster)
+		URL = "http://opentopo.sdsc.edu/lidar?format=sd"
+		name_list = raster_name_list
 
-		private_bits(lidar_raster)
+	page = urllib2.urlopen(URL)
+	soup = BeautifulSoup(page, "lxml")
+	table = soup.find("table", class_= "table table-hover table-condensed table-striped table-nospace")
+	for row in table.findAll("tr"):
+		cells = row.findAll("td")
+		cells_str = str(cells)
+		if "small text-right text-muted" in cells_str:
+			name_shearer(cells_str, lidar_raster)
+			ID_shearer(cells_str, lidar_raster)
+	private_bits(lidar_raster)
 
-		print "\n"
-		print "* indicates the dataset is PRIVATE and unavailable for download"
-		print "\n"
+	print "\n"
+	print "* indicates the dataset is PRIVATE and unavailable for download"
+	print "\n"
 
-		for i in range(0, len(raster_name_list)):
-			if len(raster_name_list[i]) < non_private_threshold:
-				print str(i + 1) + ":", raster_name_list[i]
-			else:
-				string = raster_name_list[i]
-				string = string[:private_shear]
-				raster_name_list[i] = string
-				print str(i + 1) + "*:", raster_name_list[i]
+	for i in range(0, len(name_list)):
+		if len(name_list[i]) < non_private_threshold:
+			print str(i + 1) + ":", name_list[i]
+		else:
+			string = name_list[i]
+			string = string[:private_shear]
+			name_list[i] = string
+			print str(i + 1) + "*:", name_list[i]
 
-		print "\n"
-		user_request = raw_input("Requested dataset's number entry: ")
+	print "\n"
+	user_request = raw_input("Requested dataset's number entry: ")
 
-		return int(user_request) - 1
+	return int(user_request) - 1
 
 #Creates a dataframe with the data's associated long name, ID number, and private bit
 def lidar_array_maker(lidar_raster, name_list, ID_list, private_bit_list, matrix):
@@ -324,7 +294,6 @@ def downloader(lidar_raster, URL, short_name):
 	for i in range(0, num_sub_dirs):
 		sub_dir_name = sub_dirs[i].a["href"]
 		sub_dir_URL = URL + sub_dir_name
-		print sub_dir_URL
 		os.chdir(data_directory)
 		downloader(lidar_raster, sub_dir_URL, sub_dir_name)
 
