@@ -43,7 +43,14 @@ def lidar_vs_raster():
 		print "Invalid input."
 		main("OpenTopoDL.py")
 
-#Shear HTML code (formatted as str) to extract the data's long name
+#========================================================================================
+#Function: name_shearer 																#
+#																						#
+#input:		original_str - HTML code in string format									#
+#			lidar_raster - String to determine whether to use Lidar or Raster data 		#
+#																						#
+#desc: 		Create a list with all the long names associated with the data 				#
+#========================================================================================
 def name_shearer(original_str, lidar_raster):
 	global lidar_name_list
 	global raster_name_list
@@ -65,7 +72,14 @@ def name_shearer(original_str, lidar_raster):
 			iterr = iterr + 1
 			original_str = shorter_str
 
-#Shear the HTML code (formatted as str) to extract the data's ID number
+#========================================================================================
+#Function: ID_shearer 																	#
+#																						#
+#input:		original_str - HTML code in string format 									#
+#			lidar_raster - String to determine whether to use Lidar or Raster data 		#
+#																						#
+#desc:		Create a list with all of the ID numbers associated with the data 			#
+#========================================================================================
 def ID_shearer(original_str, lidar_raster):
 	global lidar_ID_list
 	global raster_ID_list
@@ -87,8 +101,17 @@ def ID_shearer(original_str, lidar_raster):
 			iterr = iterr + 1
 			original_str = shorter_str
 
-#Create the URL associated with the data's downloadable files
-def DL_URL_creator(lidar_raster, requested_id, user_request, lidar_matrix):
+#========================================================================================
+#Function: short_name_creator 															#
+#																						#
+#input:		lidar_raster - String to determine whether the user wants Lidar or 			#
+#							Raster data 												#
+#			requested_id - ID number associated with the data the user wants 			#
+#			user_request - Listing number associated with the data the user wants 		#
+# 																						#
+#desc:		Find the 'short name' associated the requested data 						#
+#========================================================================================
+def short_name_creator(lidar_raster, requested_id, user_request):
 	global lidar_private_bit_list
 	global raster_private_bit_list
 
@@ -96,45 +119,37 @@ def DL_URL_creator(lidar_raster, requested_id, user_request, lidar_matrix):
 	short_name_shear = 29
 
 	if lidar_raster == "PC_Bulk":
-		orig_page_URL = "http://opentopo.sdsc.edu/datasetMetadata?otCollectionID=OT." + requested_id
-		if lidar_private_bit_list[user_request] == 0:
-			orig_page = urllib2.urlopen(orig_page_URL)
-			orig_soup = BeautifulSoup(orig_page, "lxml")
-			div = str(orig_soup.find('div', class_ = 'well'))
-			log = open("log.txt", "w")
-			log.write(div)
-			log.close()
-			f = open('log.txt')
-			lines = f.readlines()
-			line = lines[short_name_line]
-			short_name = line[short_name_shear:]
-			f.close()
-			os.remove('log.txt')
-			short_name = short_name.rstrip()
-			return short_name
-		else:
-			print "Dataset is private and unavailable for download"
+		private_bit_list = lidar_private_bit_list
+	elif lidar_raster == "Raster":
+		private_bit_list = raster_private_bit_list
 
+	URL = "http://opentopo.sdsc.edu/datasetMetadata?otCollectionID=OT." + requested_id
+	if private_bit_list[user_request] == 0:
+		page = urllib2.urlopen(URL)
+		soup = BeautifulSoup(page, "lxml")
+		div = str(soup.find('div', class_ = 'well'))
+		log = open("log.txt", "w")
+		log.write(div)
+		log.close()
+		f = open("log.txt")
+		lines = f.readlines()
+		line = lines[short_name_line]
+		short_name = line[short_name_shear:]
+		f.close()
+		os.remove("log.txt")
+		short_name = short_name.rstrip()
+		return short_name
 	else:
-		orig_page_URL = "http://opentopo.sdsc.edu/datasetMetadata?otCollectionID=OT." + requested_id
-		if raster_private_bit_list[user_request] == 0:
-			orig_page = urllib2.urlopen(orig_page_URL)
-			orig_soup = BeautifulSoup(orig_page, "lxml")
-			div = str(orig_soup.find('div', class_ = 'well'))
-			log = open("log.txt", "w")
-			log.write(div)
-			log.close()
-			f = open('log.txt')
-			lines = f.readlines()
-			line = lines[short_name_line]
-			short_name = line[short_name_shear:]
-			f.close()
-			os.remove('log.txt')
-			short_name = short_name.rstrip()
-			return short_name
-		else:
-			print "Dataset is private and unavailable for download"
+		print "Dataset is private and unavailable for download"
 
+#========================================================================================
+#Function: private_bits 																#
+#    																					#
+#input:		lidar_raster - String to determine whether to work with Lidar or Raster data#
+#																						#
+#desc: 		Create a list of bits (0 for public, 1 for private) to determine whether	#
+#			the dataset is public or private on OpenTopography's website 				#
+#========================================================================================
 def private_bits(lidar_raster):
 	global lidar_name_list
 	global lidar_private_bit_list
@@ -156,15 +171,23 @@ def private_bits(lidar_raster):
 			else:
 				raster_private_bit_list.append(1)
 
-#Format long names and list the data available on OpenTopography
-#Additionally, add a bit associated with the data to see if it is private or not
+#========================================================================================
+#Function: area_listing																	#
+#																						#
+#input:		lidar_raster - String to determing whether to list Lidar or Raster data     #
+#																						#
+#desc:		List the available Lidar or Raster datasets on OpenTopography's website     #
+#========================================================================================
 def area_listing(lidar_raster):
+	# Globals #
 	global lidar_name_list
 	global raster_name_list
 
+	# Vars for extracting the proper information from HTML code
 	non_private_threshold = 200
 	private_shear = -348
 
+	#Obtain the proper URL and name_list depending on whether the user wants Lidar or Raster data
 	if lidar_raster == "PC_Bulk":
 		URL = "http://opentopo.sdsc.edu/lidar"
 		name_list = lidar_name_list
@@ -172,6 +195,7 @@ def area_listing(lidar_raster):
 		URL = "http://opentopo.sdsc.edu/lidar?format=sd"
 		name_list = raster_name_list
 
+	#Find all the datasets listed on OpenTopography's website
 	page = urllib2.urlopen(URL)
 	soup = BeautifulSoup(page, "lxml")
 	table = soup.find("table", class_= "table table-hover table-condensed table-striped table-nospace")
@@ -179,10 +203,15 @@ def area_listing(lidar_raster):
 		cells = row.findAll("td")
 		cells_str = str(cells)
 		if "small text-right text-muted" in cells_str:
+
+			#Extract the proper name and ID from the HTML code
 			name_shearer(cells_str, lidar_raster)
 			ID_shearer(cells_str, lidar_raster)
+
+	#Determine whether the dataset is public or private
 	private_bits(lidar_raster)
 
+	#Print to the user the available datasets
 	print "\n"
 	print "* indicates the dataset is PRIVATE and unavailable for download"
 	print "\n"
@@ -196,64 +225,23 @@ def area_listing(lidar_raster):
 			name_list[i] = string
 			print str(i + 1) + "*:", name_list[i]
 
+	#Obtain and return the user's requested dataset's number
 	print "\n"
 	user_request = raw_input("Requested dataset's number entry: ")
 
 	return int(user_request) - 1
 
-#Creates a dataframe with the data's associated long name, ID number, and private bit
-def lidar_array_maker(lidar_raster, name_list, ID_list, private_bit_list, matrix):
-	global lidar_name_list
-	global lidar_ID_list
-	global lidar_private_bit_list
-	global raster_name_list
-	global raster_ID_list
-	global raster_private_bit_list
-
-	if lidar_raster == "PC_Bulk":
-		name_list = lidar_name_list
-		ID_list = lidar_ID_list
-		private_bit_list = lidar_private_bit_list
-		lidar_matrix = matrix
-
-		name_array = np.asarray(name_list)
-		ID_array = np.asarray(ID_list)
-		private_bit_array = np.asarray(private_bit_list)
-
-		data = { 	'name': name_array,
-					'ID': ID_array,
-					'private_bit': private_bit_array}
-		lidar_matrix = pd.DataFrame(data, columns = ['name', 'ID', 'private_bit'])
-
-		return lidar_matrix
-
-	else:
-		name_list = raster_name_list
-		ID_list = raster_ID_list
-		private_bit_list = raster_private_bit_list
-		raster_matrix = matrix
-
-		name_array = np.asarray(name_list)
-		ID_array = np.asarray(ID_list)
-		private_bit_array = np.asarray(private_bit_list)
-
-		data = {	'name': name_array,
-					'ID': ID_array,
-					'private_bit': private_bit_array}
-		raster_matrix = pd.DataFrame(data, columns = ['name', 'ID', 'private_bit'])
-
-		return raster_matrix
-
 #========================================================================================
-#Function: downloader
-#
-#input:		lidar_raster - String to determine whether to DL Lidar or Raster data
-#			URL - URL to the HTTP directory storing files/sub-directories
-#			short_name - Short name corresponding to specific data files on OpenTopography
-#
-#desc:		Download all files immediately present and within subdirectories on
-#			OpenTopography's servers to the local machine with an identical file
-#			and subdirectory hierarchy
+#Function: downloader 																	#
+#																						#
+#input:		lidar_raster - String to determine whether to DL Lidar or Raster data       #
+#			URL - URL to the HTTP directory storing files/sub-directories 				#
+#			short_name - Short name corresponding to specific data files on  			#
+#							OpenTopography 												#
+#																						#
+#desc:		Download all files immediately present and within subdirectories on 		#
+#			OpenTopography's servers to the local machine with an identical file 		#
+#			and subdirectory hierarchy 													#
 #========================================================================================
 def downloader(lidar_raster, URL, short_name):
 
@@ -303,6 +291,9 @@ def main(argv):
 	global lidar_name_list
 	global lidar_ID_list
 	global lidar_private_bit_list
+	global raster_name_list
+	global raster_ID_list
+	global raster_private_bit_list
 
 	# Vars #
 	lidar_raster = 0			#Boolean condition to check if user wants lidar or raster data. "PC_Bulk" = lidar. "Raster" = raster
@@ -323,13 +314,11 @@ def main(argv):
 		lidar_raster = lidar_vs_raster()
 		user_request = area_listing(lidar_raster)
 
-	matrix = lidar_array_maker(lidar_raster, lidar_name_list, lidar_ID_list, lidar_private_bit_list, lidar_matrix)
-
 	if lidar_raster == "PC_Bulk":
-		requested_id = matrix.loc[user_request][1]
+		requested_id = lidar_ID_list[user_request]
 	else:
-		requested_id = matrix.loc[user_request][1]
-	short_name = DL_URL_creator(lidar_raster, requested_id, user_request, lidar_matrix)
+		requested_id = raster_ID_list[user_request]
+	short_name = short_name_creator(lidar_raster, requested_id, user_request)
 	downloader(lidar_raster, 0, short_name)
 
 
