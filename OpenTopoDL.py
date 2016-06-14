@@ -22,9 +22,13 @@ raster_name_list = []
 raster_ID_list = []
 raster_private_bit_list = []
 
-#Determine whether the user wants to download Lidar Point Cloud data or Raster Data
-#lidar_raster == "PC_Bulk" --> Lidar Point Cloud data
-#lidar_raster == "Raster" --> Raster data
+#========================================================================================
+#Function: lidar_vs_raster
+#
+#input:		None
+#desc:		Return a string variable corresponding to whether the user wants Lidar or
+#			Raster data
+#========================================================================================
 def lidar_vs_raster():
 	lidar_raster = 0
 
@@ -131,6 +135,27 @@ def DL_URL_creator(lidar_raster, requested_id, user_request, lidar_matrix):
 		else:
 			print "Dataset is private and unavailable for download"
 
+def private_bits(lidar_raster):
+	global lidar_name_list
+	global lidar_private_bit_list
+	global raster_name_list
+	global raster_private_bit_list
+
+	non_private_threshold = 200
+
+	if lidar_raster == "PC_Bulk":
+		for i in range(0, len(lidar_name_list)):
+			if len(lidar_name_list[i]) < non_private_threshold:
+				lidar_private_bit_list.append(0)
+			else:
+				lidar_private_bit_list.append(1)
+	else:
+		for i in range(0, len(raster_name_list)):
+			if len(raster_name_list[i]) < non_private_threshold:
+				raster_private_bit_list.append(0)
+			else:
+				raster_private_bit_list.append(1)
+
 #Format long names and list the data available on OpenTopography
 #Additionally, add a bit associated with the data to see if it is private or not
 def area_listing(lidar_raster):
@@ -154,19 +179,19 @@ def area_listing(lidar_raster):
 				name_shearer(cells_str, lidar_raster)
 				ID_shearer(cells_str, lidar_raster)
 
+		private_bits(lidar_raster) 
+
 		print "\n"
 		print "* indicates the dataset is PRIVATE and unavailable for download"
 		print "\n"
 
 		for i in range(0, len(lidar_name_list)):
 			if len(lidar_name_list[i]) < non_private_threshold:
-				lidar_private_bit_list.append(0)
 				print str(i + 1) + ":", lidar_name_list[i]
 			else:
 				string = lidar_name_list[i]
 				string = string[:private_shear]
 				lidar_name_list[i] = string
-				lidar_private_bit_list.append(1)
 				print str(i + 1) + "*:", lidar_name_list[i]
 
 		print "\n"
@@ -186,19 +211,19 @@ def area_listing(lidar_raster):
 				name_shearer(cells_str, lidar_raster)
 				ID_shearer(cells_str, lidar_raster)
 
+		private_bits(lidar_raster)
+
 		print "\n"
 		print "* indicates the dataset is PRIVATE and unavailable for download"
 		print "\n"
 
 		for i in range(0, len(raster_name_list)):
 			if len(raster_name_list[i]) < non_private_threshold:
-				raster_private_bit_list.append(0)
 				print str(i + 1) + ":", raster_name_list[i]
 			else:
 				string = raster_name_list[i]
 				string = string[:private_shear]
 				raster_name_list[i] = string
-				raster_private_bit_list.append(1)
 				print str(i + 1) + "*:", raster_name_list[i]
 
 		print "\n"
@@ -249,54 +274,33 @@ def lidar_array_maker(lidar_raster, name_list, ID_list, private_bit_list, matrix
 
 		return raster_matrix
 
-def downloader(lidar_raster, short_name):
+#========================================================================================
+#Function: downloader
+#
+#input:		lidar_raster - String to determine whether to DL Lidar or Raster data
+#			URL - URL to the HTTP directory storing files/sub-directories
+#			short_name - Short name corresponding to specific data files on OpenTopography
+#
+#desc:		Download all files immediately present and within subdirectories on
+#			OpenTopography's servers to the local machine with an identical file
+#			and subdirectory hierarchy
+#========================================================================================
+def downloader(lidar_raster, URL, short_name):
 
-	if lidar_raster == "PC_Bulk":
+	#Obtain the proper, initial URL
+	if lidar_raster == "PC_Bulk" and URL == 0:
 		URL = "https://cloud.sdsc.edu/v1/AUTH_opentopography/PC_Bulk/" + short_name + "/"
-		page = urllib2.urlopen(URL)
-		soup = BeautifulSoup(page, "lxml")
-		entries = soup.findAll('tr', class_="item type-application type-octet-stream")
-
-		print "Prepared to download " + str(len(entries)) + " files"
-		user_input = raw_input("Would you like to continue? [y]es or [n]o: ")
-		print "\n"
-
-		if user_input == "Y" or user_input == "y":
-			source_directory = os.getcwd()
-			data_directory = source_directory + "/" + short_name
-			if os.path.exists(data_directory):
-				os.chdir(data_directory)
-			else:
-				os.makedirs(short_name)
-				os.chdir(data_directory)
-
-
-			for i in range(0, len(entries)):
-				file = entries[i].a["href"]
-				URL_with_file = URL + file
-				print file
-				wget.download(URL_with_file)
-				print "\n"
-
-			os.chdir(source_directory)
-		else:
-			del lidar_name_list[:]
-			del lidar_ID_list[:]
-			del lidar_private_bit_list[:]
-			main("OpenTopoDL.py")
-
-
-	else:
+	elif lidar_raster == "Raster" and URL == 0:
 		URL = "https://cloud.sdsc.edu/v1/AUTH_opentopography/Raster/" + short_name + "/"
-		dir_recursive_descent(URL, short_name)
 
-def dir_recursive_descent(dir_URL, short_name):
-	page = urllib2.urlopen(dir_URL)
+	#Find all files and sub-directories within the HTML of the page
+	page = urllib2.urlopen(URL)
 	soup = BeautifulSoup(page, "lxml")
 	entries = soup.findAll('tr', class_ = "item type-application type-octet-stream")
 	sub_dirs = soup.findAll('tr', class_= "item subdir")
 	num_sub_dirs = len(sub_dirs)
 
+	#Obtain/create local directories to save files to
 	source_directory = os.getcwd()
 	data_directory = source_directory + "\\" + short_name
 
@@ -306,20 +310,23 @@ def dir_recursive_descent(dir_URL, short_name):
 		os.makedirs(short_name)
 		os.chdir(data_directory)
 
+	#Download all available files
 	for i in range(0, len(entries)):
 		file = entries[i].a["href"]
-		URL_with_file = dir_URL + file
+		URL_with_file = URL + file
 		print URL_with_file
 		wget.download(URL_with_file)
 		print "\n"
 
 	os.chdir(source_directory)
 
+	#If sub-directories are present, recurse into them
 	for i in range(0, num_sub_dirs):
 		sub_dir_name = sub_dirs[i].a["href"]
-		sub_dir_URL = dir_URL + sub_dir_name
+		sub_dir_URL = URL + sub_dir_name
+		print sub_dir_URL
 		os.chdir(data_directory)
-		dir_recursive_descent(sub_dir_URL, sub_dir_name)
+		downloader(lidar_raster, sub_dir_URL, sub_dir_name)
 
 def main(argv):
 
@@ -339,10 +346,10 @@ def main(argv):
 
 	if len(argv) > 1:
 		if argv[1] == "l":
-			lidar_raster == "PC_Bulk"
+			lidar_raster = "PC_Bulk"
 		elif argv[1] == "r":
-			lidar_raster == "Raster"
-		user_request == int(argv[2]) - 1
+			lidar_raster = "Raster"
+		user_request = int(argv[2]) - 1
 	else:
 		lidar_raster = lidar_vs_raster()
 		user_request = area_listing(lidar_raster)
@@ -354,7 +361,7 @@ def main(argv):
 	else:
 		requested_id = matrix.loc[user_request][1]
 	short_name = DL_URL_creator(lidar_raster, requested_id, user_request, lidar_matrix)
-	downloader(lidar_raster, short_name)
+	downloader(lidar_raster, 0, short_name)
 
 
 if __name__ == "__main__":
