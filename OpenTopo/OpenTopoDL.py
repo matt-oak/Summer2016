@@ -146,6 +146,16 @@ def URL_creator(lidar_raster):
 	else:
 		raise Exception('Invalid dataset type')
 
+#========================================================================================
+#Function: list_creator
+#
+#input:		cells - HTML 'a' tags
+#			lidar_raster - String to determine whether to work with Lidar or Raster data
+#			name_list - List of dataset long names
+#			ID_list - List of dataset ID numbers
+#
+#desc:		Create lists of long names and ID numbers from the acquired HTML
+#========================================================================================
 def list_creator(cells, lidar_raster, name_list, ID_list):
 	for i in range(0, len(cells)):
 		long_name = cells[i].string
